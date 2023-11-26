@@ -1,0 +1,63 @@
+.default: &defaultConf
+  # Scaling config depends on your technology, some might need more or less resources.
+  # We recommend using instant scaling via zCLI to scale your runners up/down before and after a job.
+  verticalAutoscaling:
+    minVCpu: 5
+    maxVCpu: 20
+    minRam: 8
+    maxRam: 32
+    minDisk: 5
+    maxDisk: 100
+
+  # Runners are configured using following environment variables.
+  # GITLAB_URL and GITLAB_TOKEN are used to register the runner to your GitLab instance during the initialization.
+  # Content of the following env variables will be stored in a file on a runner
+  # SSH_CONFIG -> `~/.ssh/config`
+  # SSH_KEY -> `~/.ssh/id_rsa`
+  # GIT_CONFIG -> `~/.gitconfig`
+  envVariables:
+    GITLAB_URL: https://git.company.tld
+    GITLAB_TOKEN: super-secret-gitlab-token
+    SSH_CONFIG: |
+      Host git.company.tld
+        User git
+        IdentityFile ~/.ssh/id_rsa
+        StrictHostKeyChecking no
+    SSH_KEY: |
+      -----BEGIN OPENSSH PRIVATE KEY-----
+      ..................................................
+      ..................................................
+      ..................................................
+      ..................................................
+      -----END OPENSSH PRIVATE KEY-----
+    GIT_CONFIG: |
+      [url "ssh://git@git.company.tld:"]
+        insteadOf = https://git.company.tld/
+
+  # Runners cannot be allowed to freely scale up/down based on load, so min and max containers must be the same.
+  # To save resources, multiple runner services might be set up, to handle peak loads, and stopped using API outside peak hours.
+  minContainers: 6
+  maxContainers: 6
+
+  buildFromGit: https://github.com/zeropsio/gitlab-runners
+
+services:
+  - hostname: node16
+    <<: *defaultConf
+    type: nodejs@16
+
+  - hostname: node18
+    <<: *defaultConf
+    type: nodejs@18
+
+  - hostname: dotnet
+    <<: *defaultConf
+    type: dotnet@6
+
+  - hostname: golang19
+    <<: *defaultConf
+    type: go@1
+
+  - hostname: ubuntu
+    <<: *defaultConf
+    type: ubuntu@22.04

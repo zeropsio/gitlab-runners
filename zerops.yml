@@ -1,0 +1,74 @@
+# Common base for all service types
+.base:
+  build: &base-build
+    build: echo `date`
+    deploy: [ ./deploy/~/ ]
+
+  run: &base-run
+    prepare:
+      - |
+        echo 'Installing gitlab runner'
+        systemctl isolate multi-user.target
+        useradd --comment 'GitLab Runner' --create-home gitlab-runner --shell /bin/bash
+        wget -O /usr/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64
+        chmod +x /usr/bin/gitlab-runner
+        gitlab-runner install --user=gitlab-runner --working-directory=/home/gitlab-runner
+        echo 'Creating folders'
+        mkdir -p /home/gitlab-runner/builds
+        chown gitlab-runner:gitlab-runner /home/gitlab-runner/builds
+
+    # Zerops requires a start command. To get around that, just use a 24h sleep command in a loop.
+    start: while true; do sleep 86400; done
+
+    # https://docs.gitlab.com/runner/commands/#gitlab-runner-status
+    # The exit code is zero when the service is running and non-zero when the service is not running.
+    healthCheck:
+      exec:
+        command: gitlab-runner status
+
+
+# Different service types
+node16:
+  build:
+    <<: *base-build
+    base: nodejs@16
+  run:
+    <<: *base-run
+    init:
+      - bash -x /var/www/init.sh node16
+
+node18:
+  build:
+    <<: *base-build
+    base: nodejs@18
+  run:
+    <<: *base-run
+    init:
+      - bash -x /var/www/init.sh node18
+
+dotnet6:
+  build:
+    <<: *base-build
+    base: dotnet@6
+  run:
+    <<: *base-run
+    init:
+      - bash -x /var/www/init.sh dotnet6
+
+golang19:
+  build:
+    <<: *base-build
+    base: go@1
+  run:
+    <<: *base-run
+    init:
+      - bash -x /var/www/init.sh golang19
+
+ubuntu:
+  build:
+    <<: *base-build
+    base: ubuntu@22.04
+  run:
+    <<: *base-run
+    init:
+      - bash -x /var/www/init.sh ubuntu
